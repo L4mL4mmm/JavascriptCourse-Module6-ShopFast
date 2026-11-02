@@ -1,0 +1,34 @@
+export enum Role {
+  CUSTOMER = 'CUSTOMER',
+  AGENT = 'AGENT',
+  WAREHOUSE = 'WAREHOUSE',
+  ADMIN = 'ADMIN',
+}
+
+export enum OrderStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  PROCESSING = 'PROCESSING',
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum PaymentStatus {
+  UNPAID = 'UNPAID',
+  PAID = 'PAID',
+  REFUNDED = 'REFUNDED',
+}
+
+export enum TicketStatus {
+  OPEN = 'OPEN',
+  PENDING_CONFIRMATION = 'PENDING_CONFIRMATION',
+  RESOLVED = 'RESOLVED',
+  CLOSED = 'CLOSED',
+}
+
+export enum ProposalStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}

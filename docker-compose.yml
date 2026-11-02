@@ -1,0 +1,107 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shopfast-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-shopfast}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-shopfast_secret}
+      POSTGRES_DB: ${DB_NAME:-shopfast_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-shopfast} -d ${DB_NAME:-shopfast_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shopfast-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: shopfast-redis
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shopfast-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shopfast-backend
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-shopfast}
+      DB_PASSWORD: ${DB_PASSWORD:-shopfast_secret}
+      DB_NAME: ${DB_NAME:-shopfast_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-shopfast_super_secret_access_jwt_key_2026}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-shopfast_super_secret_refresh_jwt_key_2026}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-15m}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
+      THROTTLE_TTL: 60000
+      THROTTLE_LIMIT: 100
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - shopfast-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shopfast-frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - shopfast-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: shopfast-nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - shopfast-net
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  shopfast-net:
+    driver: bridge
